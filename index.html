@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sanjay Rath's Maharaja Yoga Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap');
+        
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        h1, h2, h3, .vedic-font { font-family: 'Cinzel', serif; }
+        
+        /* South Indian Chart Styles */
+        .rasi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            grid-template-rows: repeat(4, 1fr);
+            gap: 2px;
+            background-color: #cbd5e1;
+            border: 2px solid #eab308;
+            aspect-ratio: 1 / 1;
+            width: 100%;
+            max-width: 500px;
+            margin: auto;
+        }
+        .rasi-cell {
+            background-color: #ffffff;
+            padding: 4px;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            min-height: 70px;
+        }
+        .rasi-cell.center-box {
+            grid-column: 2 / 4;
+            grid-row: 2 / 4;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            text-align: center;
+            border: 1px solid #fef08a;
+            background-color: #fefce8;
+        }
+        
+        .rasi-sign-name {
+            font-size: 0.65rem;
+            color: #94a3b8;
+            position: absolute;
+            bottom: 4px;
+            right: 4px;
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+        .planet-badge {
+            font-size: 0.75rem;
+            font-weight: 600;
+            padding: 2px 4px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            width: fit-content;
+            background-color: #f1f5f9;
+            color: #334155;
+            border: 1px solid #e2e8f0;
+        }
+        .bg-lagna { background-color: #e0e7ff; color: #3730a3; border: 1px solid #c7d2fe; }
+
+        .glass-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+            border: 1px solid #e2e8f0;
+        }
+    </style>
+</head>
+<body class="text-slate-800 p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto space-y-6">
+        
+        <!-- Header -->
+        <header class="flex flex-col md:flex-row items-center justify-between gap-4 bg-white p-6 rounded-2xl shadow-sm border border-amber-200">
+            <div>
+                <h1 class="text-3xl font-bold text-slate-900 vedic-font text-amber-600 flex items-center gap-3">
+                    <i class="fa-solid fa-crown"></i> Parent-Child Rajayoga Link
+                </h1>
+                <p class="text-slate-500 text-sm mt-1">Cross-chart Maharaja Yoga calculation featuring complete Conditional Udu Daśā Engine</p>
+            </div>
+            <button onclick="userIntervened=false; calculateAll()" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-lg transition-all shadow-md hover:shadow-lg text-lg flex items-center gap-2">
+                <i class="fa-solid fa-star-of-life"></i> Analyze Link
+            </button>
+        </header>
+
+        <!-- Inputs Row -->
+        <div class="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            <!-- Parent Inputs -->
+            <div class="bg-amber-50/50 p-5 rounded-2xl border border-amber-200 shadow-sm">
+                <h3 class="font-bold text-amber-800 mb-3 vedic-font flex items-center gap-2"><i class="fa-solid fa-user-tie text-amber-600"></i> Parent (Father/Mother) Details</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-semibold text-amber-700 mb-1">Date</label>
+                        <input type="date" id="bDate" value="1889-11-14" class="w-full rounded-lg border-amber-300 p-2 text-sm shadow-sm bg-white focus:ring-amber-500 focus:border-amber-500">
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-semibold text-amber-700 mb-1">Time</label>
+                        <input type="time" id="bTime" value="23:21" class="w-full rounded-lg border-amber-300 p-2 text-sm shadow-sm bg-white focus:ring-amber-500 focus:border-amber-500">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-amber-700 mb-1">Search City</label>
+                        <div class="flex">
+                            <input type="text" id="bCity" value="Allahabad" class="w-full rounded-l-lg border border-amber-300 p-2 text-sm shadow-sm bg-white border-r-0 focus:ring-amber-500 focus:border-amber-500">
+                            <button onclick="geocode('b')" class="bg-amber-200 hover:bg-amber-300 text-amber-800 px-3 rounded-r-lg transition-colors border border-amber-300" title="Find Coordinates">
+                                <i class="fa-solid fa-search"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-xs font-semibold text-amber-700 mb-1">Latitude (N)</label>
+                        <input type="number" id="bLat" value="25.4358" step="0.0001" class="w-full rounded-lg border-amber-300 p-2 text-sm shadow-sm bg-amber-50/50 font-mono text-slate-500" readonly>
+                    </div>
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-xs font-semibold text-amber-700 mb-1">Longitude (E)</label>
+                        <input type="number" id="bLon" value="81.8463" step="0.0001" class="w-full rounded-lg border-amber-300 p-2 text-sm shadow-sm bg-amber-50/50 font-mono text-slate-500" readonly>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Child Inputs -->
+            <div class="bg-indigo-50/50 p-5 rounded-2xl border border-indigo-200 shadow-sm">
+                <h3 class="font-bold text-indigo-800 mb-3 vedic-font flex items-center gap-2"><i class="fa-solid fa-child text-indigo-500"></i> Child Details</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4 items-end">
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-semibold text-indigo-700 mb-1">Date</label>
+                        <input type="date" id="pDate" value="1917-11-19" class="w-full rounded-lg border-indigo-300 p-2 text-sm shadow-sm bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="col-span-2 md:col-span-1">
+                        <label class="block text-xs font-semibold text-indigo-700 mb-1">Time</label>
+                        <input type="time" id="pTime" value="23:11" class="w-full rounded-lg border-indigo-300 p-2 text-sm shadow-sm bg-white focus:ring-indigo-500 focus:border-indigo-500">
+                    </div>
+                    <div class="col-span-2">
+                        <label class="block text-xs font-semibold text-indigo-700 mb-1">Search City / GPS</label>
+                        <div class="flex">
+                            <input type="text" id="pCity" value="Allahabad" class="w-full rounded-l-lg border border-indigo-300 p-2 text-sm shadow-sm bg-white border-r-0 focus:ring-indigo-500 focus:border-indigo-500">
+                            <button onclick="geocode('p')" class="bg-indigo-200 hover:bg-indigo-300 text-indigo-800 px-3 border border-indigo-300 transition-colors" title="Find Coordinates">
+                                <i class="fa-solid fa-search"></i>
+                            </button>
+                            <button id="geoBtn" onclick="getLocation()" class="bg-indigo-100 hover:bg-indigo-200 text-indigo-700 px-3 rounded-r-lg transition-colors border border-indigo-300" title="Use Current GPS Location">
+                                <i class="fa-solid fa-location-crosshairs"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-xs font-semibold text-indigo-700 mb-1">Lat (N)</label>
+                        <input type="number" id="pLat" value="25.4358" step="0.0001" class="w-full rounded-lg border-indigo-300 p-2 text-sm shadow-sm bg-indigo-50/50 font-mono text-slate-500" readonly>
+                    </div>
+                    <div class="col-span-1 md:col-span-2">
+                        <label class="block text-xs font-semibold text-indigo-700 mb-1">Lon (E)</label>
+                        <input type="number" id="pLon" value="81.8463" step="0.0001" class="w-full rounded-lg border-indigo-300 p-2 text-sm shadow-sm bg-indigo-50/50 font-mono text-slate-500" readonly>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Side-by-Side Charts -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- Parent Chart -->
+            <div class="glass-card p-4 md:p-5 shadow-lg border-amber-200">
+                <h2 class="text-lg font-bold text-amber-800 mb-3 border-b border-amber-100 pb-2 vedic-font flex items-center justify-between">
+                    <span>Parent Rāśi Chart</span>
+                    <i class="fa-solid fa-user-tie text-amber-300"></i>
+                </h2>
+                <div class="rasi-grid border-amber-300 bg-amber-50/30" id="natalGrid"></div>
+            </div>
+
+            <!-- Child Chart -->
+            <div class="glass-card p-4 md:p-5 shadow-lg border-indigo-200">
+                <h2 class="text-lg font-bold text-indigo-800 mb-3 border-b border-indigo-100 pb-2 vedic-font flex items-center justify-between">
+                    <span>Child Rāśi Chart</span>
+                    <i class="fa-solid fa-child text-indigo-300"></i>
+                </h2>
+                <div class="rasi-grid border-indigo-300 bg-indigo-50/30" id="prashnaGrid"></div>
+            </div>
+        </div>
+
+        <!-- Synthesized Analysis Board -->
+        <div class="mt-8 animate-fade-in block">
+            <div class="glass-card p-6 md:p-8 border-l-4 border-amber-500 shadow-xl bg-gradient-to-br from-white to-slate-50">
+                <div class="flex flex-col lg:flex-row justify-between lg:items-end border-b border-slate-200 pb-4 mb-6 gap-4">
+                    <div>
+                        <h2 class="text-3xl font-bold text-slate-800 mb-1 vedic-font">
+                            <i class="fa-solid fa-crown mr-2 text-amber-500"></i> Cross-Chart Maharaja Yoga
+                        </h2>
+                        <p class="text-sm text-slate-500">Evaluating the 3 strict conditions using the Sage Parasara Conditional Daśā Engine.</p>
+                    </div>
+                    <div class="flex flex-col sm:flex-row gap-4 items-start lg:items-end">
+                        <div class="w-full sm:w-auto">
+                            <label class="text-[10px] font-bold text-teal-600 uppercase tracking-widest mb-1 block">Parent's Daśā Filter</label>
+                            <select id="parentDashaSystem" onchange="userIntervened=true; calculateMaharajaYoga()" class="w-full sm:w-auto rounded-lg border-teal-300 text-sm p-2 bg-teal-50 shadow-sm focus:ring-teal-500 font-bold text-teal-900 border cursor-pointer hover:bg-teal-100 transition-colors">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                        <div class="w-full sm:w-auto">
+                            <label class="text-[10px] font-bold text-indigo-600 uppercase tracking-widest mb-1 block">Child's Daśā Filter</label>
+                            <select id="childDashaSystem" onchange="userIntervened=true; calculateMaharajaYoga()" class="w-full sm:w-auto rounded-lg border-indigo-300 text-sm p-2 bg-indigo-50 shadow-sm focus:ring-indigo-500 font-bold text-indigo-900 border cursor-pointer hover:bg-indigo-100 transition-colors">
+                                <!-- Populated dynamically -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    <!-- Rule A Check -->
+                    <div class="bg-amber-50/70 p-5 rounded-xl border border-amber-200 shadow-sm relative overflow-hidden h-full flex flex-col">
+                        <div class="absolute -right-4 -top-4 text-amber-200 opacity-40 text-8xl"><i class="fa-solid fa-moon"></i></div>
+                        <h3 class="font-bold text-amber-900 mb-3 border-b border-amber-200 pb-2 relative z-10"><i class="fa-solid fa-link mr-2"></i>Condition (a): Moon Link</h3>
+                        <p class="text-[13px] leading-tight text-slate-600 mb-4 relative z-10">Child's Janma Rasi must equal the Exaltation sign of the Parent's Putresa (5th Lord).</p>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4 relative z-10 flex-grow">
+                            <div class="bg-white p-3 rounded-lg border border-amber-100 text-center shadow-sm">
+                                <span class="block text-[10px] font-bold text-amber-600 uppercase tracking-wider mb-1">Parent 5L Exalt</span>
+                                <strong class="text-base text-amber-700" id="m-putresa-exalt">-</strong>
+                            </div>
+                            <div class="bg-indigo-50 p-3 rounded-lg border border-indigo-100 text-center shadow-sm">
+                                <span class="block text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Child's Moon</span>
+                                <strong class="text-base text-indigo-700" id="m-janma-rasi">-</strong>
+                            </div>
+                        </div>
+                        <div id="m-cond-a-res" class="p-3 bg-white rounded-lg border border-slate-200 text-sm font-medium text-center relative z-10 shadow-sm">-</div>
+                    </div>
+
+                    <!-- Rule B Check -->
+                    <div class="bg-teal-50/70 p-5 rounded-xl border border-teal-200 shadow-sm relative overflow-hidden h-full flex flex-col">
+                        <div class="absolute -right-4 -top-4 text-teal-200 opacity-40 text-8xl"><i class="fa-solid fa-user-clock"></i></div>
+                        <h3 class="font-bold text-teal-900 mb-3 border-b border-teal-200 pb-2 relative z-10"><i class="fa-solid fa-hourglass-half mr-2"></i>Condition (b): Parent's Timeline</h3>
+                        <p class="text-[13px] leading-tight text-slate-600 mb-4 relative z-10">Parent must be running the Antardasha of their AK (or associated graha) at the time of the Child's birth.</p>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4 relative z-10 flex-grow">
+                            <div class="bg-white p-3 rounded-lg border border-teal-100 text-center shadow-sm flex flex-col justify-center">
+                                <span class="block text-[10px] font-bold text-teal-600 uppercase tracking-wider mb-1">Parent's AK</span>
+                                <strong class="text-base text-slate-800" id="m-parent-ak">-</strong>
+                            </div>
+                            <div class="bg-teal-100/50 p-3 rounded-lg border border-teal-200 text-center shadow-sm flex flex-col justify-center">
+                                <span class="block text-[10px] font-bold text-teal-700 uppercase tracking-wider mb-1">Parent AD at Birth</span>
+                                <strong class="text-base text-teal-800" id="m-parent-ad">-</strong>
+                            </div>
+                        </div>
+                        <div id="m-cond-b-res" class="p-3 bg-white rounded-lg border border-slate-200 text-sm font-medium text-center relative z-10 shadow-sm">-</div>
+                    </div>
+
+                    <!-- Rule C Check -->
+                    <div class="bg-indigo-50/70 p-5 rounded-xl border border-indigo-200 shadow-sm relative overflow-hidden h-full flex flex-col">
+                        <div class="absolute -right-4 -top-4 text-indigo-200 opacity-40 text-8xl"><i class="fa-solid fa-baby"></i></div>
+                        <h3 class="font-bold text-indigo-900 mb-3 border-b border-indigo-200 pb-2 relative z-10"><i class="fa-solid fa-hourglass-start mr-2"></i>Condition (c): Child's Timeline</h3>
+                        <p class="text-[13px] leading-tight text-slate-600 mb-4 relative z-10">Child must be born precisely during the Antardasha of their own Atmakaraka (AK).</p>
+                        
+                        <div class="grid grid-cols-2 gap-3 mb-4 relative z-10 flex-grow">
+                            <div class="bg-white p-3 rounded-lg border border-indigo-100 text-center shadow-sm flex flex-col justify-center">
+                                <span class="block text-[10px] font-bold text-indigo-600 uppercase tracking-wider mb-1">Child's AK</span>
+                                <strong class="text-base text-slate-800" id="m-child-ak">-</strong>
+                            </div>
+                            <div class="bg-indigo-100/50 p-3 rounded-lg border border-indigo-200 text-center shadow-sm flex flex-col justify-center">
+                                <span class="block text-[10px] font-bold text-indigo-700 uppercase tracking-wider mb-1">Child AD at Birth</span>
+                                <strong class="text-base text-indigo-800" id="m-child-ad">-</strong>
+                            </div>
+                        </div>
+                        <div id="m-cond-c-res" class="p-3 bg-white rounded-lg border border-slate-200 text-sm font-medium text-center relative z-10 shadow-sm">-</div>
+                    </div>
+                </div>
+                
+                <!-- Final Banner -->
+                <div id="m-final-banner" class="mt-8 bg-slate-100 p-8 rounded-2xl shadow-inner border border-slate-200 text-center transition-all duration-500 min-h-[140px] flex items-center justify-center">
+                    <span class="text-slate-400 font-medium text-lg"><i class="fa-solid fa-arrow-up mr-2"></i> Evaluating astrological synastry...</span>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Core Astrology Scripts -->
+    <script>
+        // --- Core Astrological Constants ---
+        const rasiNames = ["Aries", "Taurus", "Gemini", "Cancer", "Leo", "Virgo", "Libra", "Scorpio", "Sagittarius", "Capricorn", "Aquarius", "Pisces"];
+        const signLords = ["Mars", "Venus", "Mercury", "Moon", "Sun", "Mercury", "Venus", "Mars", "Jupiter", "Saturn", "Saturn", "Jupiter"];
+        
+        // --- ALL 10 UDU DASHAS BY SAGE PARASARA ---
+        const DASHA_SYSTEMS = {
+            'VIMSHOTTARI': { name: 'Vimshottari', total: 120, type: 'standard',
+                lords: ['Ketu', 'Venus', 'Sun', 'Moon', 'Mars', 'Rahu', 'Jupiter', 'Saturn', 'Mercury'],
+                years: [7, 20, 6, 10, 7, 18, 16, 19, 17],
+                startIdxFormula: (nak) => nak % 9
+            },
+            'DWISAPTATI_SAMA': { name: 'Dwisaptati Sama', total: 72, type: 'standard',
+                lords: ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu'],
+                years: [9, 9, 9, 9, 9, 9, 9, 9],
+                startIdxFormula: (nak) => ((nak - 18 + 27) % 27) % 8
+            },
+            'SHAT_TRIMSHA': { name: 'Shat-Trimsha Sama', total: 36, type: 'standard',
+                lords: ['Moon', 'Sun', 'Jupiter', 'Mars', 'Mercury', 'Saturn', 'Venus', 'Rahu'],
+                years: [1, 2, 3, 4, 5, 6, 7, 8],
+                startIdxFormula: (nak) => ((nak - 21 + 27) % 27) % 8
+            },
+            'DWADASHOTTARI': { name: 'Dwadashottari', total: 112, type: 'standard',
+                lords: ['Sun', 'Jupiter', 'Ketu', 'Mercury', 'Rahu', 'Mars', 'Saturn', 'Moon'],
+                years: [7, 9, 11, 13, 15, 17, 19, 21],
+                startIdxFormula: (nak) => ((26 - nak + 27) % 27) % 8
+            },
+            'CHATURASHITI_SAMA': { name: 'Chaturashiti Sama', total: 84, type: 'standard',
+                lords: ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn'],
+                years: [12, 12, 12, 12, 12, 12, 12],
+                startIdxFormula: (nak) => ((nak - 14 + 27) % 27) % 7
+            },
+            'SHATABDIKA': { name: 'Shatabdika', total: 100, type: 'standard',
+                lords: ['Sun', 'Moon', 'Venus', 'Mercury', 'Jupiter', 'Mars', 'Saturn'],
+                years: [5, 5, 10, 10, 20, 20, 30],
+                startIdxFormula: (nak) => ((nak - 26 + 27) % 27) % 7
+            },
+            'SHADSOTTARI': { name: 'Shadsottari', total: 116, type: 'standard',
+                lords: ['Sun', 'Mars', 'Jupiter', 'Saturn', 'Ketu', 'Moon', 'Mercury', 'Venus'],
+                years: [11, 12, 13, 14, 15, 16, 17, 18],
+                startIdxFormula: (nak) => ((nak - 7 + 27) % 27) % 8
+            },
+            'PANCHOTTARI': { name: 'Panchottari', total: 105, type: 'standard',
+                lords: ['Sun', 'Mercury', 'Saturn', 'Mars', 'Venus', 'Moon', 'Jupiter'],
+                years: [12, 13, 14, 15, 16, 17, 18],
+                startIdxFormula: (nak) => ((nak - 16 + 27) % 27) % 7
+            },
+            'ASHTOTTARI': { name: 'Ashtottari', total: 108, type: 'block',
+                lords: ['Sun', 'Moon', 'Mars', 'Mercury', 'Saturn', 'Jupiter', 'Rahu', 'Venus'],
+                years: [6, 15, 8, 17, 10, 19, 12, 21],
+                blocks: [
+                    { startDeg: 66.66666667, endDeg: 120.00000000 },
+                    { startDeg: 120.00000000, endDeg: 160.00000000 },
+                    { startDeg: 160.00000000, endDeg: 213.33333333 },
+                    { startDeg: 213.33333333, endDeg: 253.33333333 },
+                    { startDeg: 253.33333333, endDeg: 293.33333333 },
+                    { startDeg: 293.33333333, endDeg: 333.33333333 },
+                    { startDeg: 333.33333333, endDeg: 26.66666667 },
+                    { startDeg: 26.66666667, endDeg: 66.66666667 }
+                ]
+            },
+            'SHASHTIHAYANI': { name: 'Shashtihayani', total: 60, type: 'block',
+                lords: ['Jupiter', 'Sun', 'Mars', 'Moon', 'Mercury', 'Venus', 'Saturn', 'Rahu'],
+                years: [10, 10, 10, 6, 6, 6, 6, 6],
+                blocks: [
+                    { startDeg: 0, endDeg: 40.00000000 },
+                    { startDeg: 40.00000000, endDeg: 93.33333333 },
+                    { startDeg: 93.33333333, endDeg: 133.33333333 },
+                    { startDeg: 133.33333333, endDeg: 186.66666667 },
+                    { startDeg: 186.66666667, endDeg: 226.66666667 },
+                    { startDeg: 226.66666667, endDeg: 276.66666667 },
+                    { startDeg: 276.66666667, endDeg: 306.66666667 },
+                    { startDeg: 306.66666667, endDeg: 360.00000000 }
+                ]
+            }
+        };
+
+        const DIGNITY_RULES = {
+            "Sun": { exalt: 0 }, "Moon": { exalt: 1 }, "Mars": { exalt: 9 },
+            "Mercury": { exalt: 5 }, "Jupiter": { exalt: 3 }, "Venus": { exalt: 11 },
+            "Saturn": { exalt: 6 }, "Rahu": { exalt: 2 }, "Ketu": { exalt: 8 }   
+        };
+
+        let natalPositions = {};
+        let prashnaPositions = {};
+        let globalNatalLagna = -1;
+        let globalPrashnaLagna = -1;
+        let userIntervened = false;
+
+        // --- Geocoding & Location Automation ---
+        async function geocode(prefix) {
+            const cityInput = document.getElementById(prefix + 'City');
+            const btn = cityInput.nextElementSibling;
+            const query = cityInput.value.trim();
+            if (!query) return;
+            
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            try {
+                const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+                const data = await res.json();
+                if (data && data.length > 0) {
+                    document.getElementById(prefix + 'Lat').value = parseFloat(data[0].lat).toFixed(4);
+                    document.getElementById(prefix + 'Lon').value = parseFloat(data[0].lon).toFixed(4);
+                    cityInput.value = data[0].display_name.split(',')[0];
+                } else {
+                    alert("Location not found. Try a different city name.");
+                }
+            } catch (e) {
+                console.error(e);
+                alert("Error connecting to location service.");
+            } finally {
+                btn.innerHTML = originalIcon;
+            }
+        }
+
+        function getLocation() {
+            const btn = document.getElementById('geoBtn');
+            const originalIcon = btn.innerHTML;
+            btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i>';
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(
+                    (position) => {
+                        document.getElementById('pLat').value = position.coords.latitude.toFixed(4);
+                        document.getElementById('pLon').value = position.coords.longitude.toFixed(4);
+                        document.getElementById('pCity').value = "Current GPS Location";
+                        btn.innerHTML = originalIcon;
+                    },
+                    (error) => {
+                        alert("Unable to retrieve your location. Check browser permissions.");
+                        btn.innerHTML = originalIcon;
+                    }
+                );
+            } else {
+                alert("Geolocation is not supported by this browser.");
+                btn.innerHTML = originalIcon;
+            }
+        }
+
+        // --- Core Astrological Calculations ---
+        function getLahiriAyanamsa(date) {
+            const j2000 = new Date(Date.UTC(2000, 0, 1, 12, 0, 0));
+            const centuries = ((date.getTime() - j2000.getTime()) / 86400000) / 36525;
+            return 23.853056 + (centuries * (5029.0966 / 3600));
+        }
+
+        function getSiderealAscendant(date, lat, lon) {
+            const time = new Astronomy.AstroTime(date);
+            const gmst = Astronomy.SiderealTime(time);
+            let lst = (gmst + lon / 15.0) % 24;
+            if (lst < 0) lst += 24;
+            const lstRad = (lst * 15) * Math.PI / 180;
+            const latRad = lat * Math.PI / 180;
+            const eps = 23.439 * Math.PI / 180;
+            let ascRad = Math.atan2(Math.cos(lstRad), -Math.sin(lstRad) * Math.cos(eps) - Math.tan(latRad) * Math.sin(eps));
+            let ascDeg = ascRad * 180 / Math.PI;
+            if (ascDeg < 0) ascDeg += 360;
+            return (ascDeg - getLahiriAyanamsa(date) + 360) % 360;
+        }
+
+        function getPlanetPosition(planetStr, date) {
+            const time = new Astronomy.AstroTime(date);
+            let lon;
+            if (planetStr === 'Rahu' || planetStr === 'Ketu') {
+                const j2000 = new Date(Date.UTC(2000, 0, 1, 12, 0, 0));
+                const days = (date.getTime() - j2000.getTime()) / 86400000;
+                let trueNode = (125.04452 - 0.0529537648 * days) % 360;
+                if (trueNode < 0) trueNode += 360;
+                lon = (trueNode - getLahiriAyanamsa(date) + 360) % 360;
+                if (planetStr === 'Ketu') lon = (lon + 180) % 360;
+            } else {
+                const body = Astronomy.Body[planetStr];
+                const vector = Astronomy.GeoVector(body, time, true);
+                const ecliptic = Astronomy.Ecliptic(vector);
+                lon = (ecliptic.elon - getLahiriAyanamsa(date) + 360) % 360;
+            }
+            return { rasiIndex: Math.floor(lon / 30), siderealLon: lon };
+        }
+
+        function getAtmakaraka(positions) {
+            const karakas = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu'];
+            let ak = '';
+            let maxDeg = -1;
+            karakas.forEach(p => {
+                let degInSign = positions[p].siderealLon % 30;
+                let effectiveDeg = (p === 'Rahu') ? (30 - degInSign) : degInSign;
+                if (effectiveDeg > maxDeg) { maxDeg = effectiveDeg; ak = p; }
+            });
+            return { ak, deg: maxDeg };
+        }
+
+        // --- DASHAS CONDITION FILTER ENGINE ---
+        function getApplicableDashas(positions, ascLon, sunLon, moonLon) {
+            let applicable = ['VIMSHOTTARI']; // Always applicable
+            let ascRasi = Math.floor(ascLon / 30);
+            let ascLord = signLords[ascRasi];
+            let ascLordPos = positions[ascLord].rasiIndex;
+
+            // 1. Dwisaptati Sama: Asc lord in 7th OR 7th lord in Asc
+            let lord7 = signLords[(ascRasi + 6) % 12];
+            if (ascLordPos === (ascRasi + 6) % 12 || positions[lord7].rasiIndex === ascRasi) {
+                applicable.push('DWISAPTATI_SAMA');
+            }
+
+            // Calculations for Day/Night, Paksha, Hora
+            let diff = (moonLon - sunLon + 360) % 360;
+            let isShukla = diff < 180;
+            let isKrishna = diff >= 180;
+            
+            // Simplified Day/Night using Sun position relative to Ascendant
+            let sunHouse = (Math.floor(sunLon / 30) - ascRasi + 12) % 12 + 1;
+            let isDayBirth = (sunHouse >= 7 && sunHouse <= 12);
+            
+            let ascDeg = ascLon % 30;
+            let isOddSign = (ascRasi % 2) === 0; // Aries is 0 (even index, odd sign)
+            let ascHora = isOddSign ? ((ascDeg < 15) ? 'Sun' : 'Moon') : ((ascDeg < 15) ? 'Moon' : 'Sun');
+
+            // 2. Shat-Trimsha: (Day birth && Asc in Sun's Hora) OR (Night birth && Asc in Moon's Hora)
+            if ((isDayBirth && ascHora === 'Sun') || (!isDayBirth && ascHora === 'Moon')) {
+                applicable.push('SHAT_TRIMSHA');
+            }
+
+            // 3. Dwadashottari: Navamsa Asc is Taurus(1) or Libra(6)
+            let ascNavamsa = Math.floor(ascLon / (30/9)) % 12;
+            if (ascNavamsa === 1 || ascNavamsa === 6) {
+                applicable.push('DWADASHOTTARI');
+            }
+
+            // 4. Chaturashiti Sama: 10th lord in 10th house
+            let lord10 = signLords[(ascRasi + 9) % 12];
+            if (positions[lord10].rasiIndex === (ascRasi + 9) % 12) {
+                applicable.push('CHATURASHITI_SAMA');
+            }
+
+            // 5. Shatabdika: Vargottama Ascendant
+            if (ascRasi === ascNavamsa) {
+                applicable.push('SHATABDIKA');
+            }
+
+            // 6. Shadsottari: (Krishna && Moon's Hora) OR (Shukla && Sun's Hora)
+            if ((isKrishna && ascHora === 'Moon') || (isShukla && ascHora === 'Sun')) {
+                applicable.push('SHADSOTTARI');
+            }
+
+            // 7. Panchottari: Cancer Ascendant & Cancer Dwadasamsa
+            let dwadasamsa = (ascRasi + Math.floor(ascDeg / 2.5)) % 12;
+            if (ascRasi === 3 && dwadasamsa === 3) {
+                applicable.push('PANCHOTTARI');
+            }
+
+            // 8. Ashtottari: (Krishna && Day birth) OR (Shukla && Night birth)
+            if ((isKrishna && isDayBirth) || (isShukla && !isDayBirth)) {
+                applicable.push('ASHTOTTARI');
+            }
+
+            // 9. Shashtihayani: Sun in the Ascendant
+            if (positions['Sun'].rasiIndex === ascRasi) {
+                applicable.push('SHASHTIHAYANI');
+            }
+
+            return applicable;
+        }
+
+        // --- UNIVERSAL UDU DASHA PROJECTOR ENGINE ---
+        function getRunningDasha(birthDate, targetDate, moonLon, sysName) {
+            const sys = DASHA_SYSTEMS[sysName];
+            const elapsedYears = (targetDate.getTime() - birthDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+            
+            let passedFrac = 0;
+            let lordIdx = 0;
+
+            if (sys.type === 'standard') {
+                const nakLen = 360 / 27;
+                const nakIndex = Math.floor(moonLon / nakLen);
+                passedFrac = (moonLon % nakLen) / nakLen;
+                lordIdx = sys.startIdxFormula(nakIndex);
+            } else if (sys.type === 'block') {
+                let block = null;
+                for(let i=0; i<sys.blocks.length; i++) {
+                    let b = sys.blocks[i];
+                    let s = b.startDeg;
+                    let e = b.endDeg;
+                    if (s < e) {
+                        if (moonLon >= s && moonLon < e) { block = b; lordIdx = i; break; }
+                    } else { // Wraps around 360
+                        if (moonLon >= s || moonLon < e) { block = b; lordIdx = i; break; }
+                    }
+                }
+                let length = block.endDeg - block.startDeg;
+                if (length < 0) length += 360;
+                let passed = moonLon - block.startDeg;
+                if (passed < 0) passed += 360;
+                passedFrac = passed / length;
+            }
+
+            const remainingFrac = 1 - passedFrac;
+            const numLords = sys.lords.length;
+            
+            let mdYears = sys.years[lordIdx];
+            let balanceMDYears = remainingFrac * mdYears;
+            
+            let runningMDIdx = lordIdx;
+            let yearsIntoMD = 0;
+
+            if (elapsedYears < balanceMDYears) {
+                yearsIntoMD = passedFrac * mdYears + elapsedYears;
+            } else {
+                let yearsLeft = elapsedYears - balanceMDYears;
+                runningMDIdx = (runningMDIdx + 1) % numLords;
+                while (yearsLeft > sys.years[runningMDIdx]) {
+                    yearsLeft -= sys.years[runningMDIdx];
+                    runningMDIdx = (runningMDIdx + 1) % numLords;
+                }
+                yearsIntoMD = yearsLeft;
+            }
+
+            const currentMD = sys.lords[runningMDIdx];
+            const runningMDYears = sys.years[runningMDIdx];
+            
+            // Calculate Antardasha (AD)
+            let adAcc = 0;
+            let runningAD = '';
+            for (let i = 0; i < numLords; i++) {
+                let adIdx = (runningMDIdx + i) % numLords;
+                let currentAdLord = sys.lords[adIdx];
+                let adLen = (runningMDYears * sys.years[adIdx]) / sys.total;
+                adAcc += adLen;
+                if (yearsIntoMD <= adAcc) {
+                    runningAD = currentAdLord;
+                    break;
+                }
+            }
+
+            return { md: currentMD, ad: runningAD };
+        }
+
+        // --- UI Rendering ---
+        function buildGridTemplate(gridId, typeLabel, bgClass) {
+            const grid = document.getElementById(gridId);
+            grid.innerHTML = `
+                <div class="rasi-cell center-box ${bgClass}">
+                    <span class="text-xl font-bold text-slate-800 vedic-font tracking-widest">${typeLabel}</span>
+                    <span id="${gridId}-lagna" class="text-xs font-bold mt-1 bg-white px-2 py-0.5 rounded shadow-sm text-slate-700"></span>
+                </div>
+                <div class="rasi-cell border-b border-r border-slate-200" id="${gridId}-11"><span class="rasi-sign-name">Pis</span></div>
+                <div class="rasi-cell border-b border-r border-slate-200" id="${gridId}-0"><span class="rasi-sign-name">Ari</span></div>
+                <div class="rasi-cell border-b border-r border-slate-200" id="${gridId}-1"><span class="rasi-sign-name">Tau</span></div>
+                <div class="rasi-cell border-b border-slate-200" id="${gridId}-2"><span class="rasi-sign-name">Gem</span></div>
+                <div class="rasi-cell border-b border-r border-slate-200" id="${gridId}-10"><span class="rasi-sign-name">Aqu</span></div>
+                <div class="rasi-cell border-b border-slate-200" id="${gridId}-3"><span class="rasi-sign-name">Can</span></div>
+                <div class="rasi-cell border-b border-r border-slate-200" id="${gridId}-9"><span class="rasi-sign-name">Cap</span></div>
+                <div class="rasi-cell border-b border-slate-200" id="${gridId}-4"><span class="rasi-sign-name">Leo</span></div>
+                <div class="rasi-cell border-r border-slate-200" id="${gridId}-8"><span class="rasi-sign-name">Sag</span></div>
+                <div class="rasi-cell border-r border-slate-200" id="${gridId}-7"><span class="rasi-sign-name">Sco</span></div>
+                <div class="rasi-cell border-r border-slate-200" id="${gridId}-6"><span class="rasi-sign-name">Lib</span></div>
+                <div class="rasi-cell" id="${gridId}-5"><span class="rasi-sign-name">Vir</span></div>
+            `;
+        }
+
+        function populateGrid(gridId, lagnaRasi, planetsData) {
+            document.getElementById(`${gridId}-lagna`).innerText = `Lg: ${rasiNames[lagnaRasi]}`;
+            
+            const lagnaBox = document.getElementById(`${gridId}-${lagnaRasi}`);
+            const lBadge = document.createElement('div');
+            lBadge.className = `planet-badge bg-lagna shadow-sm border border-indigo-200`;
+            lBadge.innerText = "Lg";
+            lagnaBox.prepend(lBadge);
+
+            for (const [planet, pos] of Object.entries(planetsData)) {
+                const box = document.getElementById(`${gridId}-${pos.rasiIndex}`);
+                const badge = document.createElement('div');
+                badge.className = `planet-badge shadow-sm`;
+                badge.innerText = planet.substring(0, 2).toUpperCase();
+                box.prepend(badge);
+            }
+        }
+
+        function populateDashaDropdown(selectId, applicableArray, selectedValue) {
+            const select = document.getElementById(selectId);
+            select.innerHTML = '';
+            Object.keys(DASHA_SYSTEMS).forEach(key => {
+                const sys = DASHA_SYSTEMS[key];
+                const isApp = applicableArray.includes(key);
+                const opt = document.createElement('option');
+                opt.value = key;
+                opt.innerHTML = `${sys.name} (${sys.total} Yrs) ${isApp && key !== 'VIMSHOTTARI' ? '★ Applicable' : ''}`;
+                
+                if (isApp && key !== 'VIMSHOTTARI') {
+                    opt.classList.add('font-bold', 'text-amber-700', 'bg-amber-50');
+                }
+
+                if (key === selectedValue) opt.selected = true;
+                select.appendChild(opt);
+            });
+        }
+
+        // --- MAHARAJA YOGA AUTOMATION (PARENT-CHILD) ---
+        function calculateMaharajaYoga() {
+            if (!natalPositions || !prashnaPositions || globalNatalLagna === -1 || globalPrashnaLagna === -1) return;
+
+            const bDateStr = document.getElementById('bDate').value;
+            const bTimeStr = document.getElementById('bTime').value;
+            const parentDateTime = new Date(`${bDateStr}T${bTimeStr}`);
+
+            const cDateStr = document.getElementById('pDate').value;
+            const cTimeStr = document.getElementById('pTime').value;
+            const childDateTime = new Date(`${cDateStr}T${cTimeStr}`);
+
+            // 1. Get Applicable Dashas for both
+            const parentAscLon = getSiderealAscendant(parentDateTime, parseFloat(document.getElementById('bLat').value), parseFloat(document.getElementById('bLon').value));
+            const pAppDashas = getApplicableDashas(natalPositions, parentAscLon, natalPositions['Sun'].siderealLon, natalPositions['Moon'].siderealLon);
+            
+            const childAscLon = getSiderealAscendant(childDateTime, parseFloat(document.getElementById('pLat').value), parseFloat(document.getElementById('pLon').value));
+            const cAppDashas = getApplicableDashas(prashnaPositions, childAscLon, prashnaPositions['Sun'].siderealLon, prashnaPositions['Moon'].siderealLon);
+
+            // --- Condition A: Child Moon = Parent 5th Lord's Exaltation ---
+            const parentHouse5 = (globalNatalLagna + 4) % 12;
+            const putresa = signLords[parentHouse5];
+            const putresaExalt = DIGNITY_RULES[putresa].exalt;
+            const childMoonRasi = prashnaPositions['Moon'].rasiIndex;
+            const condA = (childMoonRasi === putresaExalt);
+
+            const parentAkData = getAtmakaraka(natalPositions);
+            const akSignLord = signLords[natalPositions[parentAkData.ak].rasiIndex];
+            const childAkData = getAtmakaraka(prashnaPositions);
+
+            // --- AUTO-EVALUATOR ---
+            // Scan all applicable dashas to find a match if the user hasn't forced one
+            let bestParentDasha = document.getElementById('parentDashaSystem').value || pAppDashas[pAppDashas.length - 1] || 'VIMSHOTTARI';
+            let bestChildDasha = document.getElementById('childDashaSystem').value || cAppDashas[cAppDashas.length - 1] || 'VIMSHOTTARI';
+
+            if (!userIntervened) {
+                // Scan Parent
+                for (let d of pAppDashas) {
+                    let testDasha = getRunningDasha(parentDateTime, childDateTime, natalPositions['Moon'].siderealLon, d);
+                    if (testDasha.ad === parentAkData.ak || testDasha.ad === akSignLord) {
+                        bestParentDasha = d;
+                        break;
+                    }
+                }
+                // Scan Child
+                for (let d of cAppDashas) {
+                    let testDasha = getRunningDasha(childDateTime, childDateTime, prashnaPositions['Moon'].siderealLon, d);
+                    if (testDasha.ad === childAkData.ak) {
+                        bestChildDasha = d;
+                        break;
+                    }
+                }
+            }
+
+            // Update Dropdowns
+            populateDashaDropdown('parentDashaSystem', pAppDashas, bestParentDasha);
+            populateDashaDropdown('childDashaSystem', cAppDashas, bestChildDasha);
+
+            // --- Condition B & C Testing with selected dashas ---
+            const parentDashaAtChildBirth = getRunningDasha(parentDateTime, childDateTime, natalPositions['Moon'].siderealLon, bestParentDasha);
+            const condB = (parentDashaAtChildBirth.ad === parentAkData.ak || parentDashaAtChildBirth.ad === akSignLord);
+
+            const childDashaAtBirth = getRunningDasha(childDateTime, childDateTime, prashnaPositions['Moon'].siderealLon, bestChildDasha);
+            const condC = (childDashaAtBirth.ad === childAkData.ak);
+
+            // --- Update UI ---
+            // Rule A Output
+            document.getElementById('m-putresa-exalt').innerText = `${rasiNames[putresaExalt]} (${putresa})`;
+            document.getElementById('m-janma-rasi').innerText = rasiNames[childMoonRasi];
+            let uiCondA = condA
+                ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Connected</span>`
+                : `<span class="text-amber-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Failed</span>`;
+            document.getElementById('m-cond-a-res').innerHTML = `${uiCondA}`;
+
+            // Rule B Output
+            document.getElementById('m-parent-ak').innerText = `${parentAkData.ak} (${parentAkData.deg.toFixed(1)}°)`;
+            document.getElementById('m-parent-ad').innerText = `${parentDashaAtChildBirth.md} - ${parentDashaAtChildBirth.ad}`;
+            let uiCondB = condB
+                ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Matched</span>`
+                : `<span class="text-teal-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Failed</span>`;
+            document.getElementById('m-cond-b-res').innerHTML = `${uiCondB} <span class="text-slate-500 text-xs">(Req: ${parentAkData.ak} or ${akSignLord})</span>`;
+
+            // Rule C Output
+            document.getElementById('m-child-ak').innerText = `${childAkData.ak} (${childAkData.deg.toFixed(1)}°)`;
+            document.getElementById('m-child-ad').innerText = `${childDashaAtBirth.md} - ${childDashaAtBirth.ad}`;
+            let uiCondC = condC
+                ? `<span class="text-emerald-600 font-bold"><i class="fa-solid fa-circle-check"></i> Matched</span>`
+                : `<span class="text-indigo-500 font-bold"><i class="fa-solid fa-circle-xmark"></i> Failed</span>`;
+            document.getElementById('m-cond-c-res').innerHTML = `${uiCondC} <span class="text-slate-500 text-xs">(Req: ${childAkData.ak})</span>`;
+            
+            // Final Banner
+            const banner = document.getElementById('m-final-banner');
+            if (condA && condB && condC) {
+                banner.className = "mt-8 p-8 rounded-2xl shadow-lg border-2 border-amber-400 bg-gradient-to-r from-amber-100 to-yellow-200 text-center transition-all duration-500 min-h-[140px] flex flex-col items-center justify-center animate-pulse";
+                banner.innerHTML = `
+                    <div class="text-amber-600 text-5xl mb-3"><i class="fa-solid fa-crown"></i></div>
+                    <h2 class="text-3xl font-bold text-amber-900 vedic-font mb-2">Maharaja Yoga Activated!</h2>
+                    <p class="text-amber-800 font-medium max-w-xl mx-auto">"A Maharaja is born who will rule for long."<br>The extraordinary temporal link between Parent and Child is beautifully fulfilled across all timelines.</p>
+                `;
+            } else {
+                banner.className = "mt-8 bg-slate-50 p-8 rounded-2xl shadow-sm border border-slate-200 text-center transition-all duration-500 min-h-[140px] flex flex-col items-center justify-center";
+                banner.innerHTML = `
+                    <div class="text-slate-300 text-4xl mb-3"><i class="fa-solid fa-scale-unbalanced"></i></div>
+                    <h2 class="text-xl font-bold text-slate-600 vedic-font mb-2">Yoga Conditions Not Fully Met</h2>
+                    <p class="text-slate-500 text-sm">All 3 synchronized timeline conditions must match perfectly to fulfill the cross-chart Rajayoga.</p>
+                `;
+            }
+        }
+
+        function calculateAll() {
+            buildGridTemplate('natalGrid', 'PARENT', 'bg-amber-50');
+            buildGridTemplate('prashnaGrid', 'CHILD', 'bg-indigo-50');
+
+            const planets = ['Sun', 'Moon', 'Mars', 'Mercury', 'Jupiter', 'Venus', 'Saturn', 'Rahu', 'Ketu'];
+            
+            // --- PARENT CHART ---
+            const bDateStr = document.getElementById('bDate').value;
+            const bTimeStr = document.getElementById('bTime').value;
+            if(!bDateStr || !bTimeStr) return;
+            const bDate = new Date(`${bDateStr}T${bTimeStr}`);
+            
+            const bLat = parseFloat(document.getElementById('bLat').value);
+            const bLon = parseFloat(document.getElementById('bLon').value);
+            
+            globalNatalLagna = Math.floor(getSiderealAscendant(bDate, bLat, bLon) / 30);
+            natalPositions = {};
+            planets.forEach(p => { natalPositions[p] = getPlanetPosition(p, bDate); });
+            populateGrid('natalGrid', globalNatalLagna, natalPositions);
+
+            // --- CHILD CHART ---
+            const cDateStr = document.getElementById('pDate').value;
+            const cTimeStr = document.getElementById('pTime').value;
+            if(!cDateStr || !cTimeStr) return;
+            const pDate = new Date(`${cDateStr}T${cTimeStr}`);
+            
+            const pLat = parseFloat(document.getElementById('pLat').value);
+            const pLon = parseFloat(document.getElementById('pLon').value);
+            
+            globalPrashnaLagna = Math.floor(getSiderealAscendant(pDate, pLat, pLon) / 30);
+            prashnaPositions = {};
+            planets.forEach(p => { prashnaPositions[p] = getPlanetPosition(p, pDate); });
+            populateGrid('prashnaGrid', globalPrashnaLagna, prashnaPositions);
+
+            // --- RUN SYNTHESIS ---
+            calculateMaharajaYoga();
+        }
+
+        window.onload = () => {
+            calculateAll();
+        };
+    </script>
+</body>
+</html>
